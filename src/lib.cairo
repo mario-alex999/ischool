@@ -12,7 +12,7 @@ use starknet::ContractAddress;
 
 pub struct Student{
     pub id: u8,
-    pub name: felt252,
+    pub name: u8,
     pub level: u64,
     pub age: u8,
 }
@@ -20,7 +20,7 @@ pub struct Student{
 
 #[starknet::interface]
 pub trait ISchool<TContractState>{
-    fn add_student(ref self: TContractState, name: felt252, level: u64, age:u8,);
+    fn add_student(ref self: TContractState, name: u8, level: u8, age:u8,);
     fn remove_student(ref self: TContractState, id:u8);
     fn update_student( ref self: TContractState, id:u8, level: u64,);
     fn get_students(self: @TContractState) -> Array<Student>;
@@ -48,7 +48,7 @@ use super::Student;
         pub removed_students: Map<ContractAddress, Student>,
         pub added_students_record: Map<ContractAddress, Student>,
         pub removed_students_record: Map<ContractAddress, Student>,
-        pub total_students_record: Map<ContractAddress, u256>,
+        pub total_students_record: Map<ContractAddress, Student>,
 
         }
 
@@ -64,7 +64,7 @@ use super::Student;
     pub struct StudentAddedEvent {
         student: ContractAddress,
         student_id: u8,
-        student_name: felt252,
+        student_name: u8,
         timestap: u64,
     }
 
@@ -72,14 +72,14 @@ use super::Student;
     pub struct StudentRemovedEvent {
         pub student_id: u8,
         pub student: ContractAddress,
-        pub student_name: felt252,
+        pub student_name: u8,
         pub timestap: u64,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct StudentUpdatedEvent {
         pub student_id: u8,
-        pub student_name: felt252,
+        pub student_name: u8,
         pub student_level: u64,
         pub timestap: u64,
     }
@@ -94,7 +94,7 @@ fn constructor(ref self: ContractState, headmaster: ContractAddress) {
 impl BenzAcademyimpl of ISchool<ContractState> {
 
     fn add_student(
-        ref self: ContractState, name: felt252, level: u64, age: u8,
+        ref self: ContractState, name: u8, level: u8, age: u8,
     ) {
             let caller: ContractAddress = get_caller_address();
             let headmaster:ContractAddress = self.headmaster.read();
@@ -104,7 +104,7 @@ impl BenzAcademyimpl of ISchool<ContractState> {
             let empty_student: Student = Student { id: 0, name: 0, level: 0, age: 0 };
             assert(existing == empty_student, 'Student already exists');
 
-                let student = Student { id: 1, name, age, level };
+            let student: Student = Student {id: 1, name: name, level: 1, age: age };
                 self.student.write(1, student);
     
                 self.emit(Event::StudentAdded(StudentAddedEvent {
@@ -124,7 +124,7 @@ impl BenzAcademyimpl of ISchool<ContractState> {
         self.student.write(id, empty_student);
 
         let count = self.total_students_record.read(caller);
-        self.total_students_record.write(caller, count - 1);
+        self.total_students_record.write(caller, count );
 
         self.emit(Event::StudentRemoved(StudentRemovedEvent {
             student_id: id,

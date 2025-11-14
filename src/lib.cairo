@@ -84,11 +84,7 @@ use super::Student;
         pub timestap: u64,
     }
 #[constructor]
-fn constructor(ref self: ContractState, headmaster: ContractAddress) {
-    self.headmaster.write(headmaster);
-}
-
-fn only_admin(ref self: ContractState) {
+fn constructor(ref self: ContractState) {
     let caller: ContractAddress = get_caller_address();
     let headmaster = self.headmaster.read();
     assert(caller == headmaster, 'Only admin');

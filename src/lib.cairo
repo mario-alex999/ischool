@@ -73,8 +73,7 @@ pub mod BenzAcademy {
 #[constructor]
 fn constructor(ref self: ContractState, headmaster: ContractAddress) {
     let caller: ContractAddress = get_caller_address();
-    let headmaster:ContractAddress = self.headmaster.read();
-    assert(caller == headmaster, 'Only admin');
+    self.headmaster.write(headmaster);
 }
 
 #[abi(embed_v0)]

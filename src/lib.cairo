@@ -86,7 +86,7 @@ use super::Student;
 #[constructor]
 fn constructor(ref self: ContractState) {
     let caller: ContractAddress = get_caller_address();
-    let headmaster = self.headmaster.read();
+    let headmaster:ContractAddress = self.headmaster.read();
     assert(caller == headmaster, 'Only admin');
 }
 

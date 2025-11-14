@@ -97,11 +97,11 @@ impl BenzAcademyimpl of ISchool<ContractState> {
         ref self: ContractState, name: felt252, level: u64, age: u8,
     ) {
             let caller: ContractAddress = get_caller_address();
-            let headmaster = self.headmaster.read();
+            let headmaster:ContractAddress = self.headmaster.read();
             assert(caller == headmaster, 'Only admin');
 
-            let existing = self.student.read(1);
-            let empty_student = Student { id: 0, name: 0, level: 0, age: 0 };
+            let existing: Student = self.student.read(1);
+            let empty_student: Student = Student { id: 0, name: 0, level: 0, age: 0 };
             assert(existing == empty_student, 'Student already exists');
 
                 let student = Student { id: 1, name, age, level };
@@ -117,7 +117,7 @@ impl BenzAcademyimpl of ISchool<ContractState> {
         
         fn remove_student(ref self: ContractState, id: u8) {
         let caller: ContractAddress = get_caller_address();
-        let existing = self.student.read(id);
+        let existing: Student = self.student.read(id);
         let empty_student = Student { id: 0, name: 0, level: 0, age: 0 };
         assert(existing != empty_student, 'Student does not exist');
 
@@ -137,7 +137,7 @@ impl BenzAcademyimpl of ISchool<ContractState> {
         fn update_student(
             ref self: ContractState, id: u8, level: u64,
     ) {
-        let mut existing = self.student.read(id);
+        let mut existing: Student = self.student.read(id);
         existing.level = level;
         self.student.write(id, existing);
 

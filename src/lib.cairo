@@ -1,14 +1,4 @@
-use BenzAcademy::ContractState;
-use starknet::storage::StoragePointerWriteAccess;
-use starknet::event::EventEmitter;
-use starknet::storage::StorageMapWriteAccess;
-use starknet::storage::StorageMapReadAccess;
-use starknet::storage::StoragePointerReadAccess;
-use starknet::get_caller_address;
-use starknet::get_block_timestamp;
-use starknet::ContractAddress;
-
-#[derive(Copy, Drop, Serde, PartialEq, starknet::Store, Default)]
+#[derive(Drop, Copy, Serde, Default, PartialEq, starknet::Store, starknet::Event)]
 
 pub struct Student{
     pub id: u8,
@@ -30,16 +20,12 @@ pub trait ISchool<TContractState>{
 
 #[starknet::contract]
 pub mod BenzAcademy {
-use starknet::get_block_timestamp;
-use crate::StorageMapWriteAccess;
-use crate::StorageMapReadAccess;
-use crate::ISchool;
-use crate::ISchoolDispatcherTrait;
-use crate::BenzAcademy;
-use super::Student;
-    use starknet::ContractAddress;
-    use starknet::storage::{Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry};
-    use starknet::get_caller_address;
+    use starknet::storage::{
+        Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
+    use starknet::{ContractAddress,get_block_timestamp, get_caller_address};
+    use super::{Student, ISchool};
+
 
 #[storage]
     pub struct Storage{
@@ -49,19 +35,20 @@ use super::Student;
         pub added_students_record: Map<ContractAddress, Student>,
         pub removed_students_record: Map<ContractAddress, Student>,
         pub total_students_record: Map<ContractAddress, Student>,
+        pub student_count: u8
 
         }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
-        StudentAdded: StudentAddedEvent,
-        StudentRemoved: StudentRemovedEvent,
-        StudentUpdated: StudentUpdatedEvent,
+        StudentAdded: StudentAdded,
+        StudentRemoved: StudentRemoved,
+        StudentUpdated: StudentUpdated,
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct StudentAddedEvent {
+    pub struct StudentAdded {
         student: ContractAddress,
         student_id: u8,
         student_name: u8,
@@ -69,7 +56,7 @@ use super::Student;
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct StudentRemovedEvent {
+    pub struct StudentRemoved {
         pub student_id: u8,
         pub student: ContractAddress,
         pub student_name: u8,
@@ -77,7 +64,7 @@ use super::Student;
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct StudentUpdatedEvent {
+    pub struct StudentUpdated {
         pub student_id: u8,
         pub student_name: u8,
         pub student_level: u64,
@@ -91,7 +78,7 @@ fn constructor(ref self: ContractState, headmaster: ContractAddress) {
 }
 
 #[abi(embed_v0)]
-impl BenzAcademyimpl of ISchool<ContractState> {
+pub impl BenzAcademyimpl of ISchool<ContractState> {
 
     fn add_student(
         ref self: ContractState, name: u8, level: u8, age: u8,
@@ -100,53 +87,55 @@ impl BenzAcademyimpl of ISchool<ContractState> {
             let headmaster:ContractAddress = self.headmaster.read();
             assert(caller == headmaster, 'Only admin');
 
-            let existing: Student = self.student.read(1);
+            let existing: Student = Student { id: 1, name: 1, level: 1, age: 1};
             let empty_student: Student = Student { id: 0, name: 0, level: 0, age: 0 };
             assert(existing == empty_student, 'Student already exists');
 
+            let student_id: u8 = self.student_count.read();
+            self.student_count.write(student_id + 1);
+
             let student: Student = Student {id: 1, name: name, level: 1, age: age };
-                self.student.write(1, student);
+                self.student.entry(student_id).write(student);
     
-                self.emit(Event::StudentAdded(StudentAddedEvent {
+                self
+                .emit(
+                    StudentAdded {
                     student: caller,
                     student_id: 1,
                     student_name: name,
                     timestap: get_block_timestamp(),
-                }));
+                });
             }
         
         fn remove_student(ref self: ContractState, id: u8) {
         let caller: ContractAddress = get_caller_address();
-        let existing: Student = self.student.read(id);
+        let existing: Student = self.student.entry(id).read();
         let empty_student = Student { id: 0, name: 0, level: 0, age: 0 };
         assert(existing != empty_student, 'Student does not exist');
 
-        self.student.write(id, empty_student);
+        self.student.entry(id).write(empty_student);
 
-        let count = self.total_students_record.read(caller);
-        self.total_students_record.write(caller, count );
-
-        self.emit(Event::StudentRemoved(StudentRemovedEvent {
+        self.emit(
+            StudentRemoved {
             student_id: id,
             student: caller,
             student_name: existing.name,
             timestap: get_block_timestamp(),
-        }));
+        });
     }
         
-        fn update_student(
-            ref self: ContractState, id: u8, level: u64,
-    ) {
-        let mut existing: Student = self.student.read(id);
+        fn update_student(ref self: ContractState, id: u8, level: u64,) {
+        let mut existing: Student = self.student.entry(id).read();
         existing.level = level;
-        self.student.write(id, existing);
+        self.student.entry(id).write(existing);
 
-        self.emit(Event::StudentUpdated(StudentUpdatedEvent {
+        self.emit(
+            StudentUpdated {
             student_id: id,
             student_name: existing.name,
             student_level: level,
             timestap: get_block_timestamp(),
-        }));
+        })
     }
 
         fn get_students(self: @ContractState) -> Array<Student> {
@@ -155,7 +144,7 @@ impl BenzAcademyimpl of ISchool<ContractState> {
         }
     
         fn get_student(self: @ContractState, id: u8) -> Student {
-            self.student.read(id)
+            self.student.entry(id).read()
         }
     }
 }
